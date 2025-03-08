@@ -43,6 +43,13 @@ export default function RootLayout() {
         */}
         {/* 注意：headerShown: false 可以隐藏Stack的顶部栏，这里如果不隐藏，就会出现双层顶部 */}
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        {/* 注意：全屏模态框 presentation: 'modal' 的配置在不同平台有差别：
+                 - iOS 的效果是 Modal，
+                 - Android 和 H5 的效果是页面跳转
+            https://expo.nodejs.cn/router/advanced/modals/
+        */}
+        {/* animation 过渡动画 */}
+        <Stack.Screen name="modal" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />
