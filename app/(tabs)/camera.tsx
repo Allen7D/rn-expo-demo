@@ -1,24 +1,34 @@
 import { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { type ImageSource } from 'expo-image';
 
 import { ImageViewer } from '@/components/ImageViewer';
 import { CameraButton } from '@/components/CameraButton';
 import IconButton from '@/components/IconButton';
 import CircleButton from '@/components/CircleButton';
+import EmojiPicker from '@/components/EmojiPicker';
+import EmojiList from '@/components/EmojiList';
+import EmojiSticker from '@/components/EmojiSticker';
 
 const PlaceholderImage = require('@/assets/images/camera/background-image.png');
 
 export default function CameraScreen() {
 	const [selectedImage, setSelectedImage] = useState<string | undefined>(undefined);
 	const [showAppOptions, setShowAppOptions] = useState<boolean>(false);
+	const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
+	const [pickedEmoji, setPickedEmoji] = useState<ImageSource | undefined>(undefined);
 
 	const onReset = () => {
 		setShowAppOptions(false);
 	};
 
 	const onAddSticker = () => {
-		// we will implement this later
+		setIsModalVisible(true);
+	};
+
+	const onModalClose = () => {
+		setIsModalVisible(false);
 	};
 
 	const onSaveImageAsync = async () => {
@@ -45,6 +55,7 @@ export default function CameraScreen() {
 		<View style={styles.container}>
 			<View style={styles.imageContainer}>
 				<ImageViewer imgSource={PlaceholderImage} selectedImage={selectedImage} />
+				{pickedEmoji && <EmojiSticker imageSize={40} stickerSource={pickedEmoji} />}
 			</View>
 			{showAppOptions ? (
 				<View style={styles.optionsContainer}>
@@ -58,6 +69,9 @@ export default function CameraScreen() {
 				<CameraButton theme="primary" label="Choose a photo" onPress={onPickImageAsync} />
 				<CameraButton label="Use this photo" onPress={() => setShowAppOptions(true)} />
 			</View>)}
+			<EmojiPicker isVisible={isModalVisible} onClose={onModalClose}>
+				<EmojiList onSelect={setPickedEmoji} onCloseModal={onModalClose} />
+			</EmojiPicker>
 		</View>
 	);
 }
