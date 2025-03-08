@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { type ImageSource } from 'expo-image';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ImageViewer } from '@/components/ImageViewer';
 import { CameraButton } from '@/components/CameraButton';
@@ -21,6 +22,7 @@ export default function CameraScreen() {
 
 	const onReset = () => {
 		setShowAppOptions(false);
+		setPickedEmoji(undefined);
 	};
 
 	const onAddSticker = () => {
@@ -52,7 +54,7 @@ export default function CameraScreen() {
 	}
 
 	return (
-		<View style={styles.container}>
+		<GestureHandlerRootView style={styles.container}>
 			<View style={styles.imageContainer}>
 				<ImageViewer imgSource={PlaceholderImage} selectedImage={selectedImage} />
 				{pickedEmoji && <EmojiSticker imageSize={40} stickerSource={pickedEmoji} />}
@@ -72,7 +74,7 @@ export default function CameraScreen() {
 			<EmojiPicker isVisible={isModalVisible} onClose={onModalClose}>
 				<EmojiList onSelect={setPickedEmoji} onCloseModal={onModalClose} />
 			</EmojiPicker>
-		</View>
+		</GestureHandlerRootView>
 	);
 }
 
