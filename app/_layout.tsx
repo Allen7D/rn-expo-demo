@@ -38,6 +38,10 @@ export default function RootLayout() {
             fontWeight: 'bold',
           }
         }}>
+        {/* 注意：app/(tabs)/index.js会匹配/，这样才能正确的显示首页。
+                 (tabs)是分组的写法，本身不占用任何路径，并且可以给当前分组的所有页面增加布局 (layout) 
+        */}
+        {/* 注意：headerShown: false 可以隐藏Stack的顶部栏，这里如果不隐藏，就会出现双层顶部 */}
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>

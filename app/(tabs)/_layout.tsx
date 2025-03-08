@@ -13,9 +13,10 @@ export default function TabLayout() {
 
   return (
     <Tabs
+      // 通用的 TabBar 样式配置（对子集生效）
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
+        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint, // 激活时的颜色
+        headerShown: false, // 是否隐藏 Header
         tabBarButton: HapticTab,
         tabBarBackground: TabBarBackground,
         tabBarStyle: Platform.select({
@@ -23,7 +24,8 @@ export default function TabLayout() {
             // Use a transparent background on iOS to show the blur effect
             position: 'absolute',
           },
-          default: {},
+          default: {
+          },
         }),
       }}>
       <Tabs.Screen
@@ -38,6 +40,12 @@ export default function TabLayout() {
         options={{
           title: 'Explore',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          // TabBar 的小徽章
+          tabBarBadge: '9',
+          tabBarBadgeStyle: {
+            color: '#fff',
+            backgroundColor: '#2196F3',
+          }
         }}
       />
     </Tabs>
