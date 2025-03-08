@@ -1,4 +1,4 @@
-import { View, Button, Image, StyleSheet, Platform } from 'react-native';
+import { Text, View, Button, Image, StyleSheet, Platform } from 'react-native';
 import { Link, router } from 'expo-router';
 
 import { HelloWave } from '@/components/HelloWave';
@@ -29,6 +29,16 @@ export default function HomeScreen() {
         <Button title="跳转到详情页（使用按钮）" onPress={() => {
           router.navigate('/details')
         }}/>
+        <Text>------------</Text>
+        <Link href={{ pathname: '/details', params: { id: 1, title: '长乐未央' }}} asChild>
+          <Button title="跳转到详情页" />
+        </Link>
+        <Link href={{ pathname: '/users/[id]', params: { id: 1 }}} asChild>
+          <Button title="跳转到用户页" />
+        </Link>
+        <Button title="跳转到用户页" onPress={(() => {
+          router.navigate({ pathname: '/users/[id]', params: { id: 1 }})
+        })}/>
       </View>
       <ThemedView style={styles.stepContainer}>
         <ThemedText type="subtitle">Step 1: Try it</ThemedText>
