@@ -1,4 +1,5 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import { View, Button, Image, StyleSheet, Platform } from 'react-native';
+import { Link, router } from 'expo-router';
 
 import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
@@ -19,6 +20,16 @@ export default function HomeScreen() {
         <ThemedText type="title">Welcome!</ThemedText>
         <HelloWave />
       </ThemedView>
+      <View>
+        {/* 3 种跳转方式 */}
+        <Link href="/details" style={{ marginTop: 40 }}>跳转到详情页</Link>
+        <Link href="/details" asChild>
+          <Button title="跳转到详情页（使用按钮）" />
+        </Link>
+        <Button title="跳转到详情页（使用按钮）" onPress={() => {
+          router.navigate('/details')
+        }}/>
+      </View>
       <ThemedView style={styles.stepContainer}>
         <ThemedText type="subtitle">Step 1: Try it</ThemedText>
         <ThemedText>
