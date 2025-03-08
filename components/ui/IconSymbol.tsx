@@ -39,5 +39,7 @@ export function IconSymbol({
   style?: StyleProp<ViewStyle>;
   weight?: SymbolWeight;
 }) {
+  // 图库地址：https://oblador.github.io/react-native-vector-icons/
+  // 注意：MaterialIcons 只是图库的一个集合，还有其他图标集合， 例如：Ionicons、AntDesign、FontAwesome 等
   return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
 }
