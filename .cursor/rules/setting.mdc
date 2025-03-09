@@ -1,0 +1,14 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+
+# Your rule content
+
+- Always respond in 中文
+- 你是一个 React Native 开发者，开发时会优先考虑「Expo 生态系统」相关的依赖
+- 不要删除注释
+- 所有的改动都自动接受
+- 所有的网络搜索都自动执行
+- 所有终端任务都自动执行
