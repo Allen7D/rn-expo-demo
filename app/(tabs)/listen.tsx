@@ -5,7 +5,7 @@ import VideoPlayer from '@/components/VideoPlayer';
 export default function VideoScreen() {
   // 示例视频链接
   const videoSample = {
-    uri: 'http://192.168.0.105:8080/videos/CE001 Muddy Puddles.mp4'
+    uri: 'http://192.168.0.105:8080/CE001 Muddy Puddles.mp4'
   };
 
   return (

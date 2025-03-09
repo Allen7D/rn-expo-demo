@@ -8,10 +8,10 @@ import {
   ActivityIndicator,
   StatusBar,
 } from 'react-native';
-import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
+import { VideoView, useVideoPlayer, StatusChangeEventPayload, PlayingChangeEventPayload, TimeUpdateEventPayload } from 'expo-video';
 import { Ionicons } from '@expo/vector-icons';
 import * as ScreenOrientation from 'expo-screen-orientation';
-import { useFullscreen } from '../app/(tabs)/_layout';
+import { useFullscreen } from '@/app/(tabs)/_layout';
 
 
 // 显示时间格式化
@@ -19,7 +19,7 @@ const formatTime = (millis: number) => {
 	const totalSeconds = Math.floor(millis / 1000);
 	const minutes = Math.floor(totalSeconds / 60);
 	const seconds = totalSeconds % 60;
-	return `${minutes}:${seconds < 10 ? '0' : ''}${seconds} `;
+	return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
 };
 
 interface VideoPlayerProps {
@@ -28,51 +28,148 @@ interface VideoPlayerProps {
   onFullscreenChange?: (isFullscreen: boolean) => void; // 添加全屏状态变化回调
 }
 
+// 定义视频状态接口
+interface VideoStatus {
+  isLoaded: boolean;
+  isPlaying: boolean;
+  isBuffering: boolean;
+  positionMillis: number;
+  durationMillis: number;
+}
+
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ source, poster, onFullscreenChange }) => {
-  const videoRef = useRef<Video>(null);
-  const [status, setStatus] = useState<AVPlaybackStatus | null>(null);
+  // 转换source格式为expo-video要求的格式
+  const videoSource = typeof source === 'number' ? { assetId: source } : { uri: source.uri };
+  
+  // 使用expo-video的useVideoPlayer钩子创建播放器实例
+  const player = useVideoPlayer(videoSource, player => {
+		player.loop = true;
+		player.play();
+	});
+  const viewRef = useRef<VideoView>(null);
+  
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const [progressBarWidth, setProgressBarWidth] = useState(0);
   
   // 使用全屏上下文（如果可用）
   const fullscreenContext = useFullscreen?.();
+
+  // 创建一个定时器，用于更新当前时间
+  useEffect(() => {
+    // 先尝试直接获取时长
+    if (player.duration > 0) {
+      setDuration(player.duration * 1000); // 转换为毫秒
+    }
+
+    // 配置播放器更频繁地触发时间更新事件
+    player.timeUpdateEventInterval = 0.1; // 100ms更新一次
+  }, [player]);
   
-  // 获取播放状态
-  const isPlaying = status?.isLoaded ? status.isPlaying : false;
-  const playableDuration = status?.isLoaded ? status.playableDurationMillis : 0; // 可播放部分的时长（毫秒）
-  const positionMillis = status?.isLoaded ? status.positionMillis : 0; // 当前播放位置（毫秒）
-  const durationMillis = status?.isLoaded ? status.durationMillis || 0 : 0; // 视频总时长（毫秒）
+  useEffect(() => {
+    console.log("设置事件监听器");
+    
+    // 监听播放状态变化
+    const statusSubscription = player.addListener('statusChange', (event: StatusChangeEventPayload) => {
+      console.log("状态变化:", event.status);
+      
+      // 检查视频是否准备好播放
+      if (player.duration > 0) {
+        setDuration(player.duration * 1000); // 转换为毫秒
+      }
+      
+      if (event.status === 'error') {
+        console.error('视频播放错误', event.error);
+      }
+    });
+    
+    // 监听播放/暂停状态变化
+    const playingSubscription = player.addListener('playingChange', (event: PlayingChangeEventPayload) => {
+      console.log("播放状态变化:", event.isPlaying);
+      setIsPlaying(event.isPlaying);
+    });
+    
+    // 监听进度更新
+    const timeUpdateSubscription = player.addListener('timeUpdate', (event: TimeUpdateEventPayload) => {
+      // console.log("时间更新:", event.currentTime, "缓冲位置:", event.bufferedPosition);
+      
+      // 更新当前播放时间
+      setCurrentTime(event.currentTime * 1000); // 转换为毫秒
+      
+      // 如果还没有获取到持续时间，尝试从播放器再次获取
+      if (duration === 0 && player.duration > 0) {
+        setDuration(player.duration * 1000); // 转换为毫秒
+      }
+      
+      // 判断缓冲状态
+      setIsBuffering(event.bufferedPosition < event.currentTime);
+    });
+    
+    // 组件卸载时清理
+    return () => {
+      console.log("清理事件监听器");
+      statusSubscription.remove();
+      playingSubscription.remove();
+      timeUpdateSubscription.remove();
+    };
+  }, [player, duration]);
+  
+  // 添加额外的定时器来更新进度，以防事件不够频繁
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout | null = null;
+    
+    if (isPlaying) {
+      // 如果正在播放，每100ms更新一次进度
+      intervalId = setInterval(() => {
+        if (player && player.currentTime) {
+          setCurrentTime(player.currentTime * 1000);
+        }
+      }, 100);
+    }
+    
+    return () => {
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [isPlaying, player]);
   
   // 播放/暂停切换
   const handlePlayPause = async () => {
-    if (!videoRef.current) return;
-    
+    console.log("切换播放/暂停");
     if (isPlaying) {
-      await videoRef.current.pauseAsync();
+      await player.pause();
     } else {
-      await videoRef.current.playAsync();
+      await player.play();
     }
   };
 
   // 更新播放进度
   const handleSliderChange = async (value: number) => {
-    if (!videoRef.current || !status?.isLoaded) return;
+    console.log("进度条拖动:", value);
+    const newPosition = value * duration / 1000; // 转换为秒
+    player.currentTime = newPosition;
     
-    const newPosition = value * durationMillis;
-    await videoRef.current.setPositionAsync(newPosition);
+    // 立即更新UI
+    setCurrentTime(newPosition * 1000);
   };
 
   // 快进/快退 5 秒
   const handleSkip = async (skipMillis: number) => {
-    if (!videoRef.current || !status?.isLoaded) return;
-    
-    const newPosition = Math.min(
-      Math.max(0, positionMillis + skipMillis),
-      durationMillis
+    console.log("快进/快退:", skipMillis);
+    const skipSeconds = skipMillis / 1000; // 转换为秒
+    const newTime = Math.min(
+      Math.max(0, player.currentTime + skipSeconds),
+      player.duration || 0
     );
     
-    await videoRef.current.setPositionAsync(newPosition);
+    player.currentTime = newTime;
+    
+    // 立即更新UI
+    setCurrentTime(newTime * 1000);
   };
 
   // 全屏模式切换
@@ -82,12 +179,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ source, poster, onFullscreenC
     if (isFullscreen) {
       // 退出全屏
       await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT);
+      // if (viewRef.current) {
+      //   await viewRef.current.exitFullscreen();
+      // }
       
       // 显示状态栏
       StatusBar.setHidden(false);
     } else {
       // 进入全屏
       await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+      // if (viewRef.current) {
+      //   await viewRef.current.enterFullscreen();
+      // }
       
       // 隐藏状态栏
       StatusBar.setHidden(true, 'fade');
@@ -126,23 +229,28 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ source, poster, onFullscreenC
     };
   }, [isFullscreen, onFullscreenChange, fullscreenContext]);
 
+  // 调试用，开发时可以查看当前时间和总时长
+  // console.log(`当前时间: ${currentTime}ms, 总时长: ${duration}ms`);
+
   return (
     <View style={isFullscreen ? styles.fullscreenContainer : styles.container}>
-      <Video
-        ref={videoRef}
+      <VideoView
+        ref={viewRef}
         style={isFullscreen ? styles.fullscreenVideo : styles.video}
-        source={source}
-        posterSource={poster ? { uri: poster } : undefined}
-        posterStyle={{ resizeMode: 'cover' }}
-        usePoster={!!poster}
-        resizeMode={ResizeMode.CONTAIN}
-        shouldPlay={false}
-        isLooping={false}
-        onPlaybackStatusUpdate={(status) => {
-          setStatus(status);
-          if (status.isLoaded) {
-            setIsBuffering(status.isBuffering);
-          }
+        player={player}
+        contentFit="cover"
+        nativeControls={false}
+				allowsPictureInPicture // 确定播放器是否允许画中画 （PiP） 模式。
+				startsPictureInPictureAutomatically
+        onFullscreenEnter={() => {
+          setIsFullscreen(true);
+          if (onFullscreenChange) onFullscreenChange(true);
+          if (fullscreenContext) fullscreenContext.setFullscreen(true);
+        }}
+        onFullscreenExit={() => {
+          setIsFullscreen(false);
+          if (onFullscreenChange) onFullscreenChange(false);
+          if (fullscreenContext) fullscreenContext.setFullscreen(false);
         }}
       />
 
@@ -188,8 +296,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ source, poster, onFullscreenC
 
       {/* 进度条 */}
       <View style={styles.progressContainer}>
-				{/* 已播放进度 */}
-        <Text style={styles.timeText}>{formatTime(positionMillis)}</Text>
+        {/* 已播放进度 */}
+        <Text style={styles.timeText}>{formatTime(currentTime)}</Text>
         <View 
           style={styles.progressBarContainer}
           onLayout={(event) => {
@@ -202,7 +310,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ source, poster, onFullscreenC
             style={[
               styles.progressFill, 
               { 
-                width: `${durationMillis > 0 ? (positionMillis / durationMillis) * 100 : 0}%` 
+                width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` 
               }
             ]} 
           />
@@ -216,8 +324,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ source, poster, onFullscreenC
             }}
           />
         </View>
-				{/* 播放总时长 */}
-        <Text style={styles.timeText}>{formatTime(durationMillis)}</Text>
+        {/* 播放总时长 */}
+        <Text style={styles.timeText}>{formatTime(duration)}</Text>
         
         {/* 全屏切换按钮 */}
         <TouchableOpacity 
