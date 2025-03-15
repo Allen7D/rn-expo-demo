@@ -1,10 +1,10 @@
 import { Text, View, Button, Image, StyleSheet, Platform } from 'react-native';
 import { Link, router } from 'expo-router';
 
-export default function HomeScreen() {
+export default function ReadScreen() {
   return (
     <View>
-      <Text>Home</Text>
+      <Text>Read</Text>
     </View>
   );
 }

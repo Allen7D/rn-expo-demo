@@ -44,15 +44,8 @@ export default function TabLayout() {
           options={{
             title: 'Home',
             tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="explore"
-          options={{
-            title: 'Explore',
-            tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-            // TabBar 的小徽章
-            tabBarBadge: '9',
+            // TabBar 的小徽章(学习任务)
+            tabBarBadge: '3',
             tabBarBadgeStyle: {
               color: '#fff',
               backgroundColor: '#2196F3',
@@ -60,17 +53,24 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="camera"
+          name="anki"
           options={{
-            title: 'Camera',
-            tabBarIcon: ({ color }) => <IconSymbol size={28} name="camera.fill" color={color} />,
+            title: 'Anki',
+            tabBarIcon: ({ color }) => <IconSymbol size={28} name="star.fill" color={color} />,
           }}
         />
         <Tabs.Screen
-          name="listen"
+          name="mark"
           options={{
-            title: 'Listen',
-            tabBarIcon: ({ color }) => <IconSymbol size={28} name="camera.fill" color={color} />,
+            title: 'Mark',
+            tabBarIcon: ({ color }) => <IconSymbol size={28} name="mark.fill" color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="my"
+          options={{
+            title: 'My',
+            tabBarIcon: ({ color }) => <IconSymbol size={28} name="my.fill" color={color} />,
           }}
         />
       </Tabs>
