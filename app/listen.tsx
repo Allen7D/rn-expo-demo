@@ -1,15 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, View, Text, TextInput, TouchableOpacity, FlatList, Alert } from 'react-native';
+import { StyleSheet, ScrollView, View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
 import VideoPlayer from '@/components/VideoPlayer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AntDesign } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
 
 // 历史记录的存储键
 const HISTORY_STORAGE_KEY = 'video_history';
 
+// 视频来源类型
+interface VideoSource {
+  uri: string;
+  isLocal?: boolean;
+  name?: string;
+}
+
 export default function VideoScreen() {
   // 当前播放的视频链接
-  const [currentVideo, setCurrentVideo] = useState({
+  const [currentVideo, setCurrentVideo] = useState<VideoSource>({
     uri: ''
   });
 
@@ -17,7 +25,7 @@ export default function VideoScreen() {
   const [videoUrl, setVideoUrl] = useState('');
 
   // 历史记录列表
-  const [history, setHistory] = useState<string[]>([]);
+  const [history, setHistory] = useState<VideoSource[]>([]);
 
   // 加载历史记录
   useEffect(() => {
@@ -37,7 +45,7 @@ export default function VideoScreen() {
   };
 
   // 保存历史记录到AsyncStorage
-  const saveHistory = async (newHistory: string[]) => {
+  const saveHistory = async (newHistory: VideoSource[]) => {
     try {
       await AsyncStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(newHistory));
     } catch (error) {
@@ -45,18 +53,20 @@ export default function VideoScreen() {
     }
   };
 
-  // 处理播放新视频
+  // 处理播放网络视频
   const handlePlayVideo = () => {
     if (!videoUrl.trim()) {
       Alert.alert('提示', '请输入有效的视频链接');
       return;
     }
 
+    const newVideo = { uri: videoUrl, isLocal: false };
+    
     // 更新当前播放的视频
-    setCurrentVideo({ uri: videoUrl });
+    setCurrentVideo(newVideo);
 
     // 更新历史记录
-    const newHistory = [videoUrl, ...history.filter(url => url !== videoUrl)].slice(0, 10);
+    const newHistory = [newVideo, ...history.filter(item => item.uri !== videoUrl)].slice(0, 10);
     setHistory(newHistory);
     saveHistory(newHistory);
 
@@ -64,18 +74,54 @@ export default function VideoScreen() {
     setVideoUrl('');
   };
 
+  // 选择本地视频
+  const pickLocalVideo = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'video/*',
+        copyToCacheDirectory: true
+      });
+
+      if (result.canceled) {
+        // 用户取消了选择
+        return;
+      }
+
+      const fileUri = result.assets[0].uri;
+      const fileName = result.assets[0].name || '本地视频';
+      
+      const newVideo = {
+        uri: fileUri,
+        isLocal: true,
+        name: fileName
+      };
+
+      // 更新当前播放视频
+      setCurrentVideo(newVideo);
+
+      // 更新历史记录
+      const newHistory = [newVideo, ...history.filter(item => item.uri !== fileUri)].slice(0, 10);
+      setHistory(newHistory);
+      saveHistory(newHistory);
+      
+    } catch (error) {
+      console.error('选择视频失败:', error);
+      Alert.alert('错误', '无法选择视频文件');
+    }
+  };
+
   // 从历史记录中播放视频
-  const playFromHistory = (url: string) => {
-    setCurrentVideo({ uri: url });
+  const playFromHistory = (video: VideoSource) => {
+    setCurrentVideo(video);
     // 将选中的条目移到历史记录的最前面
-    const newHistory = [url, ...history.filter(item => item !== url)];
+    const newHistory = [video, ...history.filter(item => item.uri !== video.uri)];
     setHistory(newHistory);
     saveHistory(newHistory);
   };
 
   // 删除单个历史记录
-  const deleteHistoryItem = (url: string) => {
-    const newHistory = history.filter(item => item !== url);
+  const deleteHistoryItem = (video: VideoSource) => {
+    const newHistory = history.filter(item => item.uri !== video.uri);
     setHistory(newHistory);
     saveHistory(newHistory);
   };
@@ -100,9 +146,17 @@ export default function VideoScreen() {
     );
   };
 
+  // 获取显示名称
+  const getDisplayName = (video: VideoSource) => {
+    if (video.isLocal && video.name) {
+      return video.name;
+    }
+    return video.uri;
+  };
+
   return (
     <ScrollView style={styles.container}>
-      {/* 输入框和播放按钮 */}
+      {/* 输入框和按钮 */}
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
@@ -115,6 +169,12 @@ export default function VideoScreen() {
           <Text style={styles.buttonText}>播放</Text>
         </TouchableOpacity>
       </View>
+      
+      {/* 选择本地视频按钮 */}
+      <TouchableOpacity style={styles.localVideoButton} onPress={pickLocalVideo}>
+        <AntDesign name="folderopen" size={16} color="#fff" />
+        <Text style={styles.localVideoButtonText}>选择本地视频</Text>
+      </TouchableOpacity>
 
       {/* 视频播放器 */}
       <View style={styles.videoContainer}>
@@ -133,19 +193,25 @@ export default function VideoScreen() {
               <Text style={styles.clearAllText}>清空</Text>
             </TouchableOpacity>
           </View>
-          {history.map((url, index) => (
+          {history.map((video, index) => (
             <View key={index} style={styles.historyItemContainer}>
               <TouchableOpacity
                 style={styles.historyItem}
-                onPress={() => playFromHistory(url)}
+                onPress={() => playFromHistory(video)}
               >
+                <AntDesign 
+                  name={video.isLocal ? "folder1" : "link"} 
+                  size={16} 
+                  color="#666"
+                  style={styles.historyIcon} 
+                />
                 <Text style={styles.historyText} numberOfLines={1} ellipsizeMode="middle">
-                  {url}
+                  {getDisplayName(video)}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.deleteButton}
-                onPress={() => deleteHistoryItem(url)}
+                onPress={() => deleteHistoryItem(video)}
               >
                 <AntDesign name="close" size={18} color="#999" />
               </TouchableOpacity>
@@ -186,6 +252,21 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
   },
+  localVideoButton: {
+    flexDirection: 'row',
+    backgroundColor: '#4CAF50',
+    marginHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  localVideoButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
   videoContainer: {
     marginVertical: 16,
   },
@@ -218,12 +299,18 @@ const styles = StyleSheet.create({
   },
   historyItem: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 12,
     backgroundColor: '#f5f5f5',
     borderRadius: 4,
   },
+  historyIcon: {
+    marginRight: 8,
+  },
   historyText: {
     color: '#333',
+    flex: 1,
   },
   deleteButton: {
     paddingHorizontal: 8,
